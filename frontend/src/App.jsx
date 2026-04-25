@@ -274,6 +274,7 @@ export default function App() {
         <MPLScreen
           taskType={taskType}
           digitString={currentDigit}
+          priorInfo={priorInfo}
           blockTrials={currentBlocks[currentBlockIndex] || []}
           blockIndex={currentBlockIndex}
           totalBlocks={currentBlocks.length}

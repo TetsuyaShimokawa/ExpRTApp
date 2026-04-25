@@ -1,12 +1,79 @@
 import { useState, useEffect, useRef } from 'react'
 import { formatYen } from '../utils'
 
+const RISK_PROB_LEVELS = [0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]
+const TIME_RATES_BY_DELAY = {
+  '1week':   [1.01, 1.02, 1.03, 1.05, 1.08, 1.12, 1.17, 1.23, 1.30],
+  '1month':  [1.01, 1.03, 1.05, 1.08, 1.12, 1.17, 1.25, 1.35, 1.50],
+  '3months': [1.02, 1.05, 1.10, 1.20, 1.35, 1.50, 1.75, 2.00, 2.50],
+}
+
+function rankLabel(rank, total) {
+  const pct = rank / total
+  if (pct <= 0.33) return { text: '低め', color: '#1565c0' }
+  if (pct <= 0.67) return { text: '中程度', color: '#e65100' }
+  return { text: '高め', color: '#2e7d32' }
+}
+
+function PriorPositionIndicator({ taskType, trial0 }) {
+  const isRisk = taskType === 'risk'
+  const levels = isRisk
+    ? RISK_PROB_LEVELS
+    : (TIME_RATES_BY_DELAY[trial0.delay_condition] || [])
+  if (!levels.length) return null
+
+  const value = isRisk ? trial0.prob : trial0.exchange_rate
+  const rank  = levels.indexOf(value) + 1   // 1-indexed
+  if (rank === 0) return null
+
+  const total = levels.length
+  const { text, color } = rankLabel(rank, total)
+
+  return (
+    <div style={pi.wrap}>
+      <span style={pi.label}>
+        {isRisk
+          ? `確率 ${trial0.prob_pct}% の位置`
+          : `×${trial0.exchange_rate} の位置（${trial0.delay_label}）`}
+      </span>
+      <div style={pi.dotRow}>
+        {levels.map((_, i) => {
+          const pos = i + 1
+          const isCurrent = pos === rank
+          return (
+            <div
+              key={i}
+              title={isRisk ? `${Math.round(levels[i] * 100)}%` : `×${levels[i]}`}
+              style={{
+                ...pi.dot,
+                background: isCurrent ? color : '#d0d0d0',
+                transform: isCurrent ? 'scale(1.5)' : 'scale(1)',
+              }}
+            />
+          )
+        })}
+      </div>
+      <span style={{ ...pi.rank, color }}>
+        全{total}水準中 <strong>{rank}番目</strong>（{text}）
+      </span>
+    </div>
+  )
+}
+
+const pi = {
+  wrap: { background: '#fffde7', border: '1px solid #ffe082', borderRadius: 8, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  label: { fontSize: 11, fontWeight: 600, color: '#795548', whiteSpace: 'nowrap' },
+  dotRow: { display: 'flex', gap: 5, alignItems: 'center' },
+  dot: { width: 10, height: 10, borderRadius: '50%', transition: 'transform 0.15s' },
+  rank: { fontSize: 12, whiteSpace: 'nowrap' },
+}
+
 // Generic MPL screen for both risk and time tasks.
 // taskType: 'risk' | 'time'
 // Risk:  A = safe_amount (certain); B = prize with probability prob
 // Time:  A = today_amount (now);   B = future_amount (after delay)
 export default function MPLScreen({
-  taskType, digitString,
+  taskType, digitString, priorInfo,
   blockTrials, blockIndex, totalBlocks,
   onBlockComplete, saving,
 }) {
@@ -107,6 +174,10 @@ export default function MPLScreen({
             ? `${formatYen(trial0.prize)} を確率 ${trial0.prob_pct}% で獲得 vs 安全な金額を確実に受け取る`
             : `今日の金額を諦めると ${trial0.delay_label} に ${formatYen(trial0.future_amount)} 受け取れます（×${trial0.exchange_rate}）`}
         </div>
+
+        {priorInfo === 'INFO' && (
+          <PriorPositionIndicator taskType={taskType} trial0={trial0} />
+        )}
 
         <p style={s.hint}>ヒント：A か B をクリックすると上下の行が自動補完されます。変更したい行は押し直せます。</p>
 
