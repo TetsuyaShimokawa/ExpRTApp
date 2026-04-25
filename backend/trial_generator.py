@@ -2,63 +2,70 @@ import random
 import string
 
 # ── Risk task ──────────────────────────────────────────────────────────────────
-PROB_LEVELS = [
-    0.01, 0.02, 0.03, 0.05, 0.07, 0.10, 0.15, 0.20, 0.25, 0.30,
-    0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80,
-    0.85, 0.90, 0.92, 0.93, 0.95, 0.97, 0.98, 0.99,
-]
-SAFE_AMOUNTS = [50 * i for i in range(1, 21)]   # ¥50 → ¥1,000
-RISK_PRIZE = 1000
+# Three prize levels; same 9 probability levels appear under each prize.
+RISK_PRIZES = [500, 1000, 2000]
+RISK_PROB_LEVELS = [0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]
+
+# Safe amounts scale with prize so the MPL always spans 5%–100% of the prize.
+SAFE_AMOUNTS_BY_PRIZE = {
+    500:  [25  * i for i in range(1, 21)],   # ¥25 – ¥500
+    1000: [50  * i for i in range(1, 21)],   # ¥50 – ¥1,000
+    2000: [100 * i for i in range(1, 21)],   # ¥100 – ¥2,000
+}
 
 # ── Time task ─────────────────────────────────────────────────────────────────
-EXCHANGE_RATES = [
-    1.01, 1.02, 1.03, 1.05, 1.07, 1.10, 1.13, 1.17, 1.20, 1.25,
-    1.30, 1.35, 1.40, 1.45, 1.50, 1.55, 1.60, 1.70, 1.80, 1.90,
-    2.00, 2.20, 2.50, 3.00, 3.50, 4.00, 5.00, 7.00,
-]
-TODAY_AMOUNTS = [50 * i for i in range(1, 21)]  # ¥50 → ¥1,000
-TIME_STAKE = 1000
-
+# Three delay conditions, all within-subject.
+# Exchange rates are calibrated per delay to be empirically plausible
+# (monthly δ ≈ 0.93–0.99, present-bias β ≈ 0.7–0.95).
 DELAYS = {
     "1week":   "1週間後",
     "1month":  "1ヶ月後",
     "3months": "3ヶ月後",
 }
 
+TIME_RATES_BY_DELAY = {
+    "1week":   [1.01, 1.02, 1.03, 1.05, 1.08, 1.12, 1.17, 1.23, 1.30],
+    "1month":  [1.01, 1.03, 1.05, 1.08, 1.12, 1.17, 1.25, 1.35, 1.50],
+    "3months": [1.02, 1.05, 1.10, 1.20, 1.35, 1.50, 1.75, 2.00, 2.50],
+}
+
+TODAY_AMOUNTS = [50 * i for i in range(1, 21)]   # ¥50 – ¥1,000
+TIME_STAKE    = 1000
+
 # ── Cognitive load ─────────────────────────────────────────────────────────────
-LOAD_BLOCKS = 14          # first or last 14 blocks of each task have load
-DIGIT_CHANGE_EVERY = 3    # new 7-digit string every N load-blocks
+TOTAL_BLOCKS       = 27           # 3 × 9 combinations per task
+LOAD_BLOCKS        = 14           # first or last 14 blocks of each task have load
+DIGIT_CHANGE_EVERY = 3            # new 7-digit string every N load-blocks
 
 
 def _make_digit_string() -> str:
     first = random.choice("123456789")
-    rest = "".join(random.choices(string.digits, k=6))
+    rest  = "".join(random.choices(string.digits, k=6))
     return first + rest
 
 
-def generate_digit_strings(load_order: str, total_blocks: int = 28) -> list[str]:
-    """Return a list of length total_blocks.
+def generate_digit_strings(load_order: str) -> list[str]:
+    """Return a list of length TOTAL_BLOCKS.
     Load blocks get a 7-digit string; no-load blocks get ''.
-    load_order: 'LOAD_FIRST' → blocks 0..13 have load
-                'LOAD_SECOND' → blocks 14..27 have load
+    load_order: 'LOAD_FIRST'  → blocks 0..13 have load
+                'LOAD_SECOND' → blocks 13..26 have load
     """
     n_load = LOAD_BLOCKS
     load_indices = (
-        range(0, n_load) if load_order == "LOAD_FIRST"
-        else range(total_blocks - n_load, total_blocks)
+        range(0, n_load)
+        if load_order == "LOAD_FIRST"
+        else range(TOTAL_BLOCKS - n_load, TOTAL_BLOCKS)
     )
     load_set = set(load_indices)
 
-    # Pre-generate enough digit strings (one per DIGIT_CHANGE_EVERY load blocks)
-    n_unique = (n_load + DIGIT_CHANGE_EVERY - 1) // DIGIT_CHANGE_EVERY
+    n_unique    = (n_load + DIGIT_CHANGE_EVERY - 1) // DIGIT_CHANGE_EVERY
     unique_digits = [_make_digit_string() for _ in range(n_unique)]
 
-    result = []
-    load_pos = 0  # position within load blocks
-    for i in range(total_blocks):
+    result   = []
+    load_pos = 0
+    for i in range(TOTAL_BLOCKS):
         if i in load_set:
-            digit_idx = load_pos // DIGIT_CHANGE_EVERY
-            result.append(unique_digits[digit_idx])
+            result.append(unique_digits[load_pos // DIGIT_CHANGE_EVERY])
             load_pos += 1
         else:
             result.append("")
@@ -66,43 +73,50 @@ def generate_digit_strings(load_order: str, total_blocks: int = 28) -> list[str]
 
 
 def generate_risk_trials() -> list[dict]:
-    """28 probability levels × 20 safe amounts = 28 blocks.
-    Block order randomised; within each block rows are ¥50→¥1,000 ascending.
+    """3 prize levels × 9 probability levels = 27 blocks.
+    Block order randomised; within each block safe amounts scale with prize.
     """
-    probs = PROB_LEVELS.copy()
-    random.shuffle(probs)
+    combinations = [
+        (prize, prob)
+        for prize in RISK_PRIZES
+        for prob in RISK_PROB_LEVELS
+    ]
+    random.shuffle(combinations)
     trials = []
-    for block_idx, prob in enumerate(probs):
-        for row_idx, safe_amount in enumerate(SAFE_AMOUNTS):
+    for block_idx, (prize, prob) in enumerate(combinations):
+        for row_idx, safe_amount in enumerate(SAFE_AMOUNTS_BY_PRIZE[prize]):
             trials.append({
-                "block": block_idx + 1,
-                "prob": prob,
-                "prob_pct": round(prob * 100, 2),
-                "row": row_idx + 1,
+                "block":      block_idx + 1,
+                "prize":      prize,
+                "prob":       prob,
+                "prob_pct":   round(prob * 100, 2),
+                "row":        row_idx + 1,
                 "safe_amount": safe_amount,
-                "prize": RISK_PRIZE,
             })
     return trials
 
 
-def generate_time_trials(delay_condition: str) -> list[dict]:
-    """28 exchange rates × 20 today-amounts = 28 blocks.
-    Block order randomised; within each block rows are ¥50→¥1,000 ascending.
+def generate_time_trials() -> list[dict]:
+    """3 delay conditions × 9 exchange rates = 27 blocks (all within-subject).
+    Block order randomised; today-amounts fixed at ¥50–¥1,000 across all delays.
     """
-    rates = EXCHANGE_RATES.copy()
-    random.shuffle(rates)
-    delay_label = DELAYS[delay_condition]
+    combinations = [
+        (delay_cond, rate)
+        for delay_cond, rates in TIME_RATES_BY_DELAY.items()
+        for rate in rates
+    ]
+    random.shuffle(combinations)
     trials = []
-    for block_idx, rate in enumerate(rates):
+    for block_idx, (delay_cond, rate) in enumerate(combinations):
         future_amount = round(TIME_STAKE * rate)
         for row_idx, today_amount in enumerate(TODAY_AMOUNTS):
             trials.append({
-                "block": block_idx + 1,
-                "exchange_rate": rate,
-                "future_amount": future_amount,
-                "row": row_idx + 1,
-                "today_amount": today_amount,
-                "delay_condition": delay_condition,
-                "delay_label": delay_label,
+                "block":          block_idx + 1,
+                "delay_condition": delay_cond,
+                "delay_label":    DELAYS[delay_cond],
+                "exchange_rate":  rate,
+                "future_amount":  future_amount,
+                "row":            row_idx + 1,
+                "today_amount":   today_amount,
             })
     return trials

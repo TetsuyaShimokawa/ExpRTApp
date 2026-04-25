@@ -117,12 +117,12 @@ export default function BreakScreen({
           {nextBlockInfo && (
             <div style={s.infoBox}>
               <span style={s.infoLabel}>
-                {isRisk ? '次のブロックの当選確率' : '次のブロックの将来受取額'}
+                {isRisk ? '次のブロック' : '次のブロック'}
               </span>
               <span style={s.infoValue}>
                 {isRisk
-                  ? `${nextBlockInfo.probPct}%（¥1,000 を確率 ${nextBlockInfo.probPct}% で）`
-                  : formatYen(nextBlockInfo.futureAmount)}
+                  ? `確率 ${nextBlockInfo.probPct}%（当選金額 ${nextBlockInfo.prize != null ? `¥${nextBlockInfo.prize.toLocaleString()}` : ''}）`
+                  : `${nextBlockInfo.delayLabel || ''} に ${formatYen(nextBlockInfo.futureAmount)}`}
               </span>
             </div>
           )}

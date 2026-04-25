@@ -5,7 +5,7 @@ import { formatYen } from '../utils'
 // If the last block of task 1 had load, first shows digit recall.
 export default function InterTaskBreakScreen({
   completedTaskType, nextTaskType,
-  prevDigit, delayLabel,
+  prevDigit,
   onContinue,
 }) {
   const needsRecall = Boolean(prevDigit)
@@ -71,8 +71,8 @@ export default function InterTaskBreakScreen({
           <p style={s.nextTitle}>{nextLabel}</p>
           <p style={s.nextDesc}>
             {nextTaskType === 'risk'
-              ? '確率ごとに、安全な金額（A）と ¥1,000 くじ（B）を選びます。28ブロック×20行。'
-              : `交換レートごとに、今すぐ受け取る（A）と${delayLabel}に受け取る（B）を選びます。28ブロック×20行。`}
+              ? '確率・賞金額ごとに、安全な金額（A）とくじ（B）を選びます。27ブロック×20行。'
+              : '交換レート・遅延期間ごとに、今すぐ受け取る（A）と将来受け取る（B）を選びます。27ブロック×20行。'}
           </p>
         </div>
 

@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from models.session import SessionStartRequest
 from models.result import RiskRowResult, TimeRowResult
 from trial_generator import (
-    DELAYS, PROB_LEVELS, EXCHANGE_RATES,
+    DELAYS, RISK_PRIZES, RISK_PROB_LEVELS, TIME_RATES_BY_DELAY,
     generate_risk_trials, generate_time_trials, generate_digit_strings,
 )
 
@@ -53,16 +53,15 @@ def start_session(req: SessionStartRequest):
 
     session_id = str(uuid.uuid4())
 
-    # 3 between-subjects random assignments
+    # 3 between-subjects random assignments (delay is now within-subject)
     prior_info = random.choice(PRIOR_INFO_CONDITIONS)
     task_order = random.choice(TASK_ORDERS)
     load_order = random.choice(LOAD_ORDERS)
-    delay_condition = random.choice(list(DELAYS.keys()))
 
     risk_trials = generate_risk_trials()
-    time_trials = generate_time_trials(delay_condition)
+    time_trials = generate_time_trials()
 
-    # Digit strings: one list per task (28 entries each)
+    # Digit strings: one list per task (27 entries each)
     risk_digit_strings = generate_digit_strings(load_order)
     time_digit_strings = generate_digit_strings(load_order)
 
@@ -72,8 +71,6 @@ def start_session(req: SessionStartRequest):
         "prior_info": prior_info,
         "task_order": task_order,
         "load_order": load_order,
-        "delay_condition": delay_condition,
-        "delay_label": DELAYS[delay_condition],
         "created_at": datetime.now().isoformat(),
     }
 
@@ -82,10 +79,9 @@ def start_session(req: SessionStartRequest):
         "prior_info": prior_info,
         "task_order": task_order,
         "load_order": load_order,
-        "delay_condition": delay_condition,
-        "delay_label": DELAYS[delay_condition],
-        "prob_levels": PROB_LEVELS,
-        "exchange_rates": EXCHANGE_RATES,
+        "risk_prizes": RISK_PRIZES,
+        "risk_prob_levels": RISK_PROB_LEVELS,
+        "time_rates_by_delay": TIME_RATES_BY_DELAY,
         "risk_trials": risk_trials,
         "time_trials": time_trials,
         "risk_digit_strings": risk_digit_strings,
@@ -117,13 +113,13 @@ def save_time_result(result: TimeRowResult):
 
 RISK_CSV_COLUMNS = [
     "participant_id", "name", "prior_info", "task_order", "load_order",
-    "block", "prob", "safe_amount", "prize", "row", "has_load", "choice",
+    "block", "prize", "prob", "safe_amount", "row", "has_load", "choice",
     "response_time_ms", "timestamp",
 ]
 
 TIME_CSV_COLUMNS = [
     "participant_id", "name", "prior_info", "task_order", "load_order",
-    "delay_condition", "block", "exchange_rate", "future_amount",
+    "block", "delay_condition", "exchange_rate", "future_amount",
     "today_amount", "row", "has_load", "choice", "response_time_ms", "timestamp",
 ]
 

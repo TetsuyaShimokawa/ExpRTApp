@@ -1,4 +1,4 @@
-export default function InstructionScreen({ loadOrder, delayLabel, onNext }) {
+export default function InstructionScreen({ loadOrder, onNext }) {
   const loadDesc = loadOrder === 'LOAD_FIRST'
     ? '各タスクの最初の14ブロック'
     : '各タスクの後半14ブロック'
@@ -12,25 +12,26 @@ export default function InstructionScreen({ loadOrder, delayLabel, onNext }) {
           <h3 style={s.heading}>全体の流れ</h3>
           <p style={s.text}>
             この実験は <strong>2つのタスク</strong>（リスク課題・時間割引課題）で構成されています。
-            各タスクはそれぞれ <strong>28ブロック</strong>（各20行）あります。
+            各タスクはそれぞれ <strong>27ブロック</strong>（各20行）あります。
           </p>
         </section>
 
         <section style={s.section}>
           <h3 style={s.heading}>タスク①：リスク課題</h3>
           <p style={s.text}>
-            各ブロックで確率 p を固定し、「<strong>安全な金額を今すぐ受け取る（A）</strong>」か
-            「<strong>¥1,000 を確率 p% で受け取る（B）</strong>」の20択を行います。
-            安全な金額は ¥50 から ¥1,000 まで変化します。
+            各ブロックで確率と当選金額を固定し、「<strong>安全な金額を今すぐ受け取る（A）</strong>」か
+            「<strong>くじを引く（B）</strong>」の20択を行います。
+            当選金額は ¥500・¥1,000・¥2,000 の3水準があり、安全な金額はその5%〜100%の範囲で変化します。
           </p>
         </section>
 
         <section style={s.section}>
           <h3 style={s.heading}>タスク②：時間割引課題</h3>
           <p style={s.text}>
-            各ブロックで交換レートを固定し、「<strong>今すぐ金額を受け取る（A）</strong>」か
-            「<strong>{delayLabel}に ¥1,000×レート を受け取る（B）</strong>」の20択を行います。
+            各ブロックで交換レートと遅延期間を固定し、「<strong>今すぐ金額を受け取る（A）</strong>」か
+            「<strong>将来（1週間後・1ヶ月後・3ヶ月後のいずれか）に ¥1,000×レート を受け取る（B）</strong>」の20択を行います。
             今日の金額は ¥50 から ¥1,000 まで変化します。
+            遅延期間はブロックごとに変わります。
           </p>
         </section>
 
@@ -59,7 +60,8 @@ export default function InstructionScreen({ loadOrder, delayLabel, onNext }) {
           <h3 style={s.heading}>報酬</h3>
           <p style={s.text}>
             全試行の中から1行をランダムに選び、その選択に基づいて報酬を決定します（BDM方式）。
-            基本謝礼 ¥1,500 に加えてパフォーマンス報酬 ¥0〜¥1,000 が支払われます。
+            基本謝礼 ¥1,500 に加えてパフォーマンス報酬 ¥0〜¥2,000 が支払われます。
+            数字記憶課題が不正解だったブロックが選ばれた場合、報酬は ¥0 となります。
           </p>
         </section>
 

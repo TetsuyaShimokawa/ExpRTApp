@@ -3,7 +3,6 @@ import { formatYen } from '../utils'
 export default function FinishScreen({
   participantId, bdmResult,
   complianceLog, allRiskResults, allTimeResults,
-  delayLabel,
 }) {
   const totalLoadBlocks = complianceLog.length
   const correctBlocks = complianceLog.filter((e) => e.correct).length
@@ -39,8 +38,8 @@ export default function FinishScreen({
             <p style={s.line}>
               <strong>抽選された試行：</strong>
               {bdmResult.taskType === 'risk'
-                ? `リスク課題 ブロック${bdmResult.selected.block}、確率${bdmResult.selected.prob_pct || Math.round(bdmResult.selected.prob * 100)}%`
-                : `時間割引課題 ブロック${bdmResult.selected.block}、×${bdmResult.selected.exchange_rate}（${delayLabel}）`}
+                ? `リスク課題 ブロック${bdmResult.selected.block}、¥${(bdmResult.selected.prize || 1000).toLocaleString()} × 確率${bdmResult.selected.prob_pct || Math.round(bdmResult.selected.prob * 100)}%`
+                : `時間割引課題 ブロック${bdmResult.selected.block}、×${bdmResult.selected.exchange_rate}（${bdmResult.selected.delay_label || ''}）`}
             </p>
             <p style={s.line}>
               <strong>あなたの選択：</strong>
@@ -49,10 +48,15 @@ export default function FinishScreen({
                     ? `A（${formatYen(bdmResult.selected.safe_amount)} を確実に）`
                     : `A（今すぐ ${formatYen(bdmResult.selected.today_amount)}）`)
                 : (bdmResult.taskType === 'risk'
-                    ? `B（¥1,000 を確率${bdmResult.selected.prob_pct || Math.round(bdmResult.selected.prob * 100)}%で）`
-                    : `B（${delayLabel}に ${formatYen(bdmResult.selected.future_amount)}）`)}
+                    ? `B（¥${(bdmResult.selected.prize || 1000).toLocaleString()} を確率${bdmResult.selected.prob_pct || Math.round(bdmResult.selected.prob * 100)}%で）`
+                    : `B（${bdmResult.selected.delay_label || ''}に ${formatYen(bdmResult.selected.future_amount)}）`)}
             </p>
             <p style={s.line}><strong>パフォーマンス報酬：</strong>{formatYen(bdmResult.reward)}</p>
+            {bdmResult.digitPenalty && (
+              <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#c62828', background: '#ffebee', borderRadius: 6, padding: '6px 10px' }}>
+                ⚠ 抽選されたブロックで数字の記憶が正解でなかったため、報酬は ¥0 となりました。
+              </p>
+            )}
             <hr style={{ margin: '10px 0' }} />
             <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#1b5e20' }}>
               合計（基本謝礼 ¥1,500 + 報酬 {formatYen(bdmResult.reward)}）

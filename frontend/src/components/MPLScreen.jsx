@@ -64,13 +64,14 @@ export default function MPLScreen({
   const headerItems = isRisk
     ? [
         { label: 'ブロック', value: `${blockIndex + 1} / ${totalBlocks}` },
-        { label: '当選確率', value: `${trial0.prob_pct}%`, color: '#1565c0' },
         { label: '当選賞金', value: formatYen(trial0.prize), color: '#1565c0' },
+        { label: '当選確率', value: `${trial0.prob_pct}%`, color: '#1565c0' },
       ]
     : [
         { label: 'ブロック', value: `${blockIndex + 1} / ${totalBlocks}` },
-        { label: '交換レート', value: `${trial0.exchange_rate}倍` },
-        { label: `${trial0.delay_label}の受取額`, value: formatYen(trial0.future_amount), color: '#2e7d32' },
+        { label: '遅延', value: trial0.delay_label, color: '#2e7d32' },
+        { label: '交換レート', value: `×${trial0.exchange_rate}` },
+        { label: '将来受取額', value: formatYen(trial0.future_amount), color: '#2e7d32' },
       ]
 
   return (
@@ -103,8 +104,8 @@ export default function MPLScreen({
 
         <div style={{ ...s.taskBadge, background: isRisk ? '#e3f2fd' : '#e8f5e9', color: isRisk ? '#1565c0' : '#2e7d32' }}>
           {isRisk
-            ? `確率 ${trial0.prob_pct}% で ¥1,000 ← このブロックの当選確率`
-            : `今日 ¥1,000 を諦めると ${trial0.delay_label} に ${formatYen(trial0.future_amount)} 受け取れます（×${trial0.exchange_rate}）`}
+            ? `${formatYen(trial0.prize)} を確率 ${trial0.prob_pct}% で獲得 vs 安全な金額を確実に受け取る`
+            : `今日の金額を諦めると ${trial0.delay_label} に ${formatYen(trial0.future_amount)} 受け取れます（×${trial0.exchange_rate}）`}
         </div>
 
         <p style={s.hint}>ヒント：A か B をクリックすると上下の行が自動補完されます。変更したい行は押し直せます。</p>

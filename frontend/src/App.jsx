@@ -40,7 +40,7 @@ function groupByBlock(trials) {
     .map(([, rows]) => rows)
 }
 
-function computeBDM(riskResults, timeResults) {
+function computeBDM(riskResults, timeResults, complianceLog) {
   const all = [
     ...riskResults.map((r) => ({ ...r, taskType: 'risk' })),
     ...timeResults.map((r) => ({ ...r, taskType: 'time' })),
@@ -53,7 +53,19 @@ function computeBDM(riskResults, timeResults) {
   } else {
     reward = sel.choice === 'A' ? sel.today_amount : sel.future_amount
   }
-  return { selected: sel, taskType: sel.taskType, reward, total: reward + 1500 }
+  // If the selected block had cognitive load, check whether the digit was recalled correctly.
+  // Incorrect or missing recall → reward = 0.
+  let digitPenalty = false
+  if (sel.has_load) {
+    const entry = complianceLog.find(
+      (c) => c.task === sel.taskType && c.blockIdx === sel.block - 1
+    )
+    if (!entry || !entry.correct) {
+      reward = 0
+      digitPenalty = true
+    }
+  }
+  return { selected: sel, taskType: sel.taskType, reward, total: reward + 1500, digitPenalty }
 }
 
 export default function App() {
@@ -68,8 +80,6 @@ export default function App() {
   const [priorInfo, setPriorInfo] = useState('NONE')
   const [taskOrder, setTaskOrder] = useState('RISK_FIRST')
   const [loadOrder, setLoadOrder] = useState('LOAD_FIRST')
-  const [delayLabel, setDelayLabel] = useState('')
-  const [delayCondition, setDelayCondition] = useState('')
 
   // Trial data
   const [riskBlocks, setRiskBlocks] = useState([])
@@ -108,8 +118,8 @@ export default function App() {
   const nextBlockTrials = currentBlocks[currentBlockIndex] || []
   const nextBlockInfo = nextBlockTrials[0]
     ? taskType === 'risk'
-      ? { probPct: Math.round((nextBlockTrials[0].prob || 0) * 100) }
-      : { futureAmount: nextBlockTrials[0].future_amount }
+      ? { probPct: Math.round((nextBlockTrials[0].prob || 0) * 100), prize: nextBlockTrials[0].prize }
+      : { futureAmount: nextBlockTrials[0].future_amount, delayLabel: nextBlockTrials[0].delay_label }
     : null
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -123,8 +133,6 @@ export default function App() {
       setPriorInfo(data.prior_info)
       setTaskOrder(data.task_order)
       setLoadOrder(data.load_order)
-      setDelayLabel(data.delay_label)
-      setDelayCondition(data.delay_condition)
       setRiskBlocks(groupByBlock(data.risk_trials))
       setTimeBlocks(groupByBlock(data.time_trials))
       setRiskDigits(data.risk_digit_strings)
@@ -168,7 +176,7 @@ export default function App() {
       if (taskType === 'risk') {
         await Promise.all(blockResults.map((r) => saveRiskResult({ ...common, ...r })))
       } else {
-        await Promise.all(blockResults.map((r) => saveTimeResult({ ...common, delay_condition: delayCondition, ...r })))
+        await Promise.all(blockResults.map((r) => saveTimeResult({ ...common, ...r })))
       }
     } catch (e) {
       console.error('保存エラー:', e)
@@ -190,7 +198,7 @@ export default function App() {
         setCurrentBlockIndex(0)
         setScreen(SCREEN.INTER_TASK)
       } else {
-        setBdmResult(computeBDM(updatedRisk, updatedTime))
+        setBdmResult(computeBDM(updatedRisk, updatedTime, complianceLog))
         setScreen(SCREEN.FINISH)
       }
     } else {
@@ -241,7 +249,6 @@ export default function App() {
       return (
         <InstructionScreen
           loadOrder={loadOrder}
-          delayLabel={delayLabel}
           onNext={handleInstructionNext}
         />
       )
@@ -250,7 +257,6 @@ export default function App() {
       return (
         <PriorInfoScreen
           taskType={taskType}
-          delayLabel={delayLabel}
           onNext={handlePriorInfoNext}
         />
       )
@@ -299,7 +305,6 @@ export default function App() {
           completedTaskType={task1Type}
           nextTaskType={task2Type}
           prevDigit={lastDigitTask1}
-          delayLabel={delayLabel}
           onContinue={handleInterTaskDone}
         />
       )
@@ -313,7 +318,6 @@ export default function App() {
           complianceLog={complianceLog}
           allRiskResults={allRiskResults}
           allTimeResults={allTimeResults}
-          delayLabel={delayLabel}
         />
       )
 
